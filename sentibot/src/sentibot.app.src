@@ -1,0 +1,17 @@
+{application, sentibot,
+ [{description, "An OTP application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, { sentibot_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    gun
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
