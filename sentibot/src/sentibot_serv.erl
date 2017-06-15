@@ -166,39 +166,46 @@ receive_data(ConnPid, StreamRef) ->
     exit(timeout)
   end.
 
-dump_mailbox() ->
-  receive
-    A ->
-      erlang:display(A),
-      dump_mailbox()
-  after 5000 ->
-    ok
-  end.
-
-handle_frame(SocketPid) ->
-  receive
-    {gun_ws, SocketPid, {text, Data}} ->
-      Json = jsone:decode(Data),
-      case maps:get(<<"type">>, Json) of
-        <<"message">> -> handle_message(Json);
-        _ -> ignore
-      end;
-    _ -> ignore
-  end,
-  handle_frame(SocketPid).
+handle_frame(SocketPid, DB) ->
+  NewDb = receive
+            {gun_ws, SocketPid, {text, Data}} ->
+              Json = jsone:decode(Data),
+              case maps:get(<<"type">>, Json) of
+                <<"message">> -> SocketPid, handle_message(Json, DB);
+                _ -> DB
+              end;
+            _ -> DB
+          end,
+  handle_frame(SocketPid, NewDb).
 
 
-handle_message(Message) ->
+handle_message(Message, DB) ->
   Channel = binary_to_list(maps:get(<<"channel">>, Message)),
   Text = binary_to_list(maps:get(<<"text">>, Message)),
-  case re:run(Text, "[Ii]\s+am\s+((?:(?:not|very)\s+)*[^\s]+)") of
-    {match, [_, {Offset, Length}]} ->
-      Emotion = string:substr(Text, Offset + 1, Length),
-      erlang:display(Emotion),
-      slacker_chat:post_message(?Token, Channel, "You look " ++ Emotion, []);
-    _ -> erlang:display("nop")
-  end.
+  case maps:get(<<"user">>, Message, bot) of
+    bot -> DB;
+    BinaryUser ->
+      User = binary_to_list(BinaryUser),
+      {ok, 200, _, Body} = slacker_user:info(?Token, User),
+      {_, UserData} = lists:keyfind(<<"user">>, 1, Body),
+      {_, BinaryName} = lists:keyfind(<<"real_name">>, 1, UserData),
+      case re:run(Text, "[Ii]\s+am\s+((?:(?:not|very)\s+)*[^\s]+)") of
+        {match, [_, {Offset, Length}]} ->
+          Name = binary_to_list(BinaryName),
+          Emotion = string:substr(Text, Offset + 1, Length),
+          slacker_chat:post_message(?Token, Channel, Name ++ " looks " ++ Emotion, []),
+          maps:put(Name, Emotion, DB);
 
+        _ ->
+          case re:run(Text, "whasup") of
+            {match, _} ->
+              List = maps:to_list(DB),
+              [slacker_chat:post_message(?Token, Channel, U ++ " is " ++ E, []) || {U, E} <- List],
+              DB;
+            _ -> DB
+          end
+      end
+  end.
 
 slack_connect() ->
   {ok, ConnPid} = gun:open("slack.com", 443),
@@ -215,7 +222,7 @@ slack_connect() ->
     exit(timeout)
   end,
 
-  handle_frame(SocketPid).
+  handle_frame(SocketPid, maps:new()).
 
 
 %erlang:display(Foo).
