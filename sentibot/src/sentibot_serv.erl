@@ -23,6 +23,7 @@
   code_change/3]).
 
 -define(SERVER, ?MODULE).
+-define(Token, "xoxb-195222969522-5QD8TIlAupmPLkN2FOAgDBiU").
 
 -record(state, {}).
 
@@ -186,19 +187,22 @@ handle_frame(SocketPid) ->
   end,
   handle_frame(SocketPid).
 
+
 handle_message(Message) ->
+  Channel = binary_to_list(maps:get(<<"channel">>, Message)),
   Text = binary_to_list(maps:get(<<"text">>, Message)),
-  case re:run(Text, "I\s+am\s+((?:(?:not|very)\s+)*[^\s]+)") of
+  case re:run(Text, "[Ii]\s+am\s+((?:(?:not|very)\s+)*[^\s]+)") of
     {match, [_, {Offset, Length}]} ->
       Emotion = string:substr(Text, Offset + 1, Length),
-      erlang:display(Emotion);
+      erlang:display(Emotion),
+      slacker_chat:post_message(?Token, Channel, "You look " ++ Emotion, []);
     _ -> erlang:display("nop")
   end.
 
 
 slack_connect() ->
   {ok, ConnPid} = gun:open("slack.com", 443),
-  Url = get_url(ConnPid, "/api/rtm.connect?token=xoxb-195222969522-5QD8TIlAupmPLkN2FOAgDBiU"),
+  Url = get_url(ConnPid, "/api/rtm.connect?token=" ++ ?Token),
   [_, _, Host, _, IdKey] = re:split(Url, "/"),
   {ok, SocketPid} = gun:open(binary_to_list(Host), 443),
   Upgrade = gun:ws_upgrade(SocketPid, "/websocket/" ++ binary_to_list(IdKey)),
