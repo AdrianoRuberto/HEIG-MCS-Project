@@ -16,6 +16,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="slacker" />
     <orderEntry type="module" module-name="gun" />
   </component>
 </module>

@@ -41,9 +41,3 @@ init([]) ->
 %%====================================================================
 %% Internal functions
 %%====================================================================
-
-
-%application:ensure_all_started(gun),
-%{ok, ConnPid} = gun:open("example.org", 443),
-%{ok, Protocol} = gun:await_up(ConnPid),
-%io:format(ConnPid).
