@@ -175,7 +175,7 @@ code_change(_OldVsn, State, _Extra) ->
 get_url(ConnPid, Dest) ->
   StreamRef = gun:get(ConnPid, Dest),
   receive
-    {gun_response, ConnPid, StreamRef, nofin, Status, Headers} ->
+    {gun_response, ConnPid, StreamRef, nofin, _, _} ->
       receive_data(ConnPid, StreamRef)
   after 1000 ->
     exit(timeout)
@@ -183,10 +183,8 @@ get_url(ConnPid, Dest) ->
 
 receive_data(ConnPid, StreamRef) ->
   receive
-    {gun_data, ConnPid, StreamRef, nofin, Data} ->
-      receive_data(ConnPid, StreamRef);
-    {gun_data, ConnPid, StreamRef, fin, Data} ->
-      maps:get(<<"url">>, jsone:decode(Data))
+    {gun_data, ConnPid, StreamRef, nofin, _} -> receive_data(ConnPid, StreamRef);
+    {gun_data, ConnPid, StreamRef, fin, Data} -> maps:get(<<"url">>, jsone:decode(Data))
   after 1000 ->
     exit(timeout)
   end.
